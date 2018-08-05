@@ -171,16 +171,20 @@ class VBot : public gloox::ConnectionListener,
 
     virtual void onConnect()
     {
+#ifdef DEBUG
         std::cout << "connected " << client_->username() << std::endl;
+#endif
 
         auto session = new gloox::MessageSession(client_, target_);
-        handleMessageSession(session);
+        addMessageSession(session);
         session->send("hello");
     }
 
     virtual void onDisconnect(gloox::ConnectionError e)
     {
+#ifdef DEBUG
         std::cout << "disconnected " << e << std::endl;
+#endif
     }
 
     virtual bool onTLSConnect(const gloox::CertInfo &info)
@@ -190,7 +194,14 @@ class VBot : public gloox::ConnectionListener,
 
     virtual void handleMessageSession(gloox::MessageSession *session)
     {
+#ifdef DEBUG
         std::cout << "new session with " << session->target() << std::endl;
+#endif
+        addMessageSession(session);
+    }
+
+    void addMessageSession(gloox::MessageSession *session)
+    {
         auto username = session->target().username();
         if (vbot_sessions_.find(username) == vbot_sessions_.end()) {
             session->registerMessageHandler(this);
@@ -198,18 +209,39 @@ class VBot : public gloox::ConnectionListener,
         }
     }
 
+    void removeMessageSession(gloox::MessageSession *session)
+    {
+        auto username = session->target().username();
+        auto key = vbot_sessions_.find(username);
+        if (key != vbot_sessions_.end()) {
+            vbot_sessions_.erase(key);
+            auto s = key->second;
+            s->removeMessageHandler();
+            delete s;
+        }
+    }
+
     virtual void handleMessage(const gloox::Message &msg, gloox::MessageSession *session)
     {
+#ifdef DEBUG
         std::cout << "subject " << msg.subject() << " body " << msg.body() << std::endl;
+#endif
         auto body = msg.body();
         if (body == "ping") {
             session->send("pong");
+        } else if (body == "tip") {
+            session->send("try another challenge");
+        } else if (body == "bye") {
+            session->send("good choice, bye!");
+            removeMessageSession(session);
         }
     }
 
     virtual bool handleIq(const gloox::IQ &iq) {
         auto username = iq.from().username();
+#ifdef DEBUG
         std::cout << "got Iq from " << username << iq.tag()->xml() << std::endl;
+#endif
 
         if (vbot_sessions_.find(username) == vbot_sessions_.end()) {
             return false;
