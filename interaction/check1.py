@@ -19,18 +19,31 @@ def main():
     port = int(sys.argv[2])
 
     class MyVBot(VBot):
-        def target_ready(self):
-            VBot.target_ready(self)
+        def target_ready(self, e):
+            VBot.target_ready(self, e)
 
             self.checks = 0
             self.schedule('translate_check', CHECK_DELAY, self.translate_check,
                     repeat=True)
+            self.message_check()
+
+        def message_check(self):
+            # check direct message
+            msgs = {
+                    'ping': 'pong',
+                    'tip': 'try another challenge',
+                    'bye': 'good choice, bye!',
+                    }
+            msg = random.choice(msgs.keys())
+
+            log.info('checking msg %s', msg)
+            if self.message_sync(self.make_message(self.target, msg)) != msgs[msg]:
+                self.check_fail('unmatched response for %s' % msg)
 
         def translate_check(self):
             self.checks += 1
             if self.checks >= CHECK_TIMES:
-                self.set_stop()
-                self.disconnect()
+                self.check_done()
                 return
             method = random.choice(['echo', randoms(4)])
             try:
@@ -49,9 +62,7 @@ def main():
                     ret = self.translate(method, data, encoding)
                     assert ret == ''
             except Exception as e:
-                self.set_stop()
-                self.disconnect()
-                log.warn('translate check fail: %r', e)
+                self.check_fail(e)
 
     xmpp = MyVBot((host, port), 'ahaha@ooo.vchat', '')
     xmpp.connect()
