@@ -64,7 +64,7 @@ def main():
             except Exception as e:
                 self.check_fail(e)
 
-    xmpp = MyVBot((host, port), 'ahaha@ooo.vchat', '')
+    xmpp = MyVBot((host, port))
     xmpp.connect()
     xmpp.process(block=True)
 

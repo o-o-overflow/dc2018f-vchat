@@ -7,6 +7,8 @@ from sleekxmpp.exceptions import IqError, IqTimeout, XMPPError
 
 from xml.etree import cElementTree as ET
 
+DEFAULT_JID = 'ahaha@ooo.vchat'
+
 class VBotTranslate(ElementBase):
     name = 'translate'
     namespace = 'vbot:translate'
@@ -15,13 +17,11 @@ class VBotTranslate(ElementBase):
     sub_interfaces = interfaces
 
 class VBotBase(ClientXMPP):
-
-    def __init__(self, jid, password):
-        ClientXMPP.__init__(self, jid, password)
+    def __init__(self):
+        ClientXMPP.__init__(self, DEFAULT_JID, '')
 
         self.add_event_handler("session_start", self.session_start)
-        self.add_event_handler("message", self.first_message, disposable=True)
-        self.add_event_handler('target_ready', self.target_ready, threaded=True)
+        self.add_event_handler('message', self.message)
 
         self.target = None
 
@@ -41,21 +41,8 @@ class VBotBase(ClientXMPP):
         self.get_roster()
         log.info('logged in as %s', self.boundjid.user)
 
-    def first_message(self, msg):
-        assert self.target is None
-        # whoever send the first message is the target vbot
-        self.target = msg.get_from()
-        self.add_event_handler('message', self.message)
-        self.event('target_ready')
-
     def message(self, msg):
         log.debug('recv %s', msg)
-        pass
-        if msg['type'] in ('chat', 'normal'):
-            msg.reply("Thanks for sending: %(body)s" % msg).send()
-
-    def target_ready(self, e):
-        log.info('chatting with %s', self.target)
 
     def message_sync(self, msg, timeout=3):
         o = []
@@ -70,7 +57,7 @@ class VBotBase(ClientXMPP):
         end = time.time() + timeout
         while time.time() < end and len(o) == 0:
             time.sleep(0.1)
-        return o[0]
+        return o[0] if len(o) == 1 else None
 
     def translate(self, method, data, encoding=None):
         assert self.target is not None
@@ -100,6 +87,17 @@ class VBot(VBotBase):
     def __init__(self, server, *args, **kwargs):
         VBotBase.__init__(self, *args, **kwargs)
         self.remote_server = server
+        self.add_event_handler('target_ready', self.target_ready, threaded=True, disposable=True)
+        self.add_event_handler("message", self.first_message, disposable=True)
+
+    def first_message(self, msg):
+        assert self.target is None
+        # whoever send the first message is the target vbot
+        self.target = msg.get_from()
+        self.event('target_ready')
+
+    def target_ready(self, e):
+        log.info('chatting with %s', self.target)
 
     def session_start(self, event):
         VBotBase.session_start(self, event)
@@ -110,6 +108,6 @@ class VBot(VBotBase):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
-    xmpp = VBotBase('ahaha@ooo.vchat', '')
+    xmpp = VBotBase()
     xmpp.connect()
     xmpp.process(block=True)
