@@ -448,7 +448,7 @@ class VBot : public gloox::ConnectionListener,
              gloox::IqHandler
 {
   public:
-    VBot(const char *host, const char *target)
+    VBot(const char *host, const char *target, const char *greeting) : greeting_(greeting)
     {
         self_.setServer(host);
         self_.setUsername("vbot");
@@ -493,7 +493,7 @@ class VBot : public gloox::ConnectionListener,
 
         auto session = new gloox::MessageSession(client_, target_);
         addMessageSession(session);
-        session->send("hello");
+        session->send(greeting_);
     }
 
     virtual void onDisconnect(gloox::ConnectionError e)
@@ -618,6 +618,7 @@ class VBot : public gloox::ConnectionListener,
     gloox::JID self_, target_;
     gloox::Client *client_;
     VTranslate *vtranslate_ext_;
+    const std::string greeting_;
     std::map<std::string, gloox::MessageSession *> vbot_sessions_;
     const VPluginBase *vplugin_default_;
     std::map<std::string, const VPluginBase *> vplugins_;
@@ -625,10 +626,10 @@ class VBot : public gloox::ConnectionListener,
 
 int main(int argc, char *argv[])
 {
-    if (argc != 3) {
-        printf("usage: %s host user\n", argv[0]);
+    if (argc != 4) {
+        printf("usage: %s host user message\n", argv[0]);
     } else {
-        VBot bot(argv[1], argv[2]);
+        VBot bot(argv[1], argv[2], argv[3]);
         bot.start();
     }
     return 0;

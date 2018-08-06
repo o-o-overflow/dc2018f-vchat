@@ -8,4 +8,5 @@ RUN chmod 755 /vchat /vbot
 
 EXPOSE 2555
 ENV VCHAT_SERVER ooo.vchat
+ENV VCHAT_MESSAGE hello
 CMD ["/usr/sbin/xinetd", "-filelog", "-", "-dontfork", "-f", "/service.conf"]
