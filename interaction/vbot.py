@@ -20,6 +20,7 @@ class VBotBase(ClientXMPP):
     def __init__(self):
         ClientXMPP.__init__(self, DEFAULT_JID, '')
 
+        self.add_event_handler('session_bind', self.session_bind)
         self.add_event_handler("session_start", self.session_start)
         self.add_event_handler('message', self.message)
 
@@ -36,10 +37,12 @@ class VBotBase(ClientXMPP):
         self.set_stop()
         self.disconnect()
 
+    def session_bind(self, event):
+        log.info('logged in as %s', self.boundjid.user)
+
     def session_start(self, event):
         self.send_presence()
         self.get_roster()
-        log.info('logged in as %s', self.boundjid.user)
 
     def message(self, msg):
         log.debug('recv %s', msg)
