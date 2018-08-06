@@ -15,6 +15,7 @@ static const std::string XMLNS_VBOT_TRANSLATE = "vbot:translate";
 enum encoding {
     EncodingNone,
     EncodingHex,
+    EncodingBase64,
 };
 
 inline uint8_t h2d(char c) {
@@ -29,7 +30,10 @@ inline uint8_t h2d(char c) {
 }
 
 static std::string decode_hex(const std::string &raw) {
-    size_t len = raw.length() / 2;
+    if (raw.length() % 2 != 0) {
+        return "";
+    }
+    const size_t len = raw.length() / 2;
     char *buf = new char[len];
     for (int i = 0, j = 0; i < len; i++, j += 2) {
         if (isxdigit(raw[j]) && isxdigit(raw[j + 1])) {
@@ -44,7 +48,7 @@ static std::string decode_hex(const std::string &raw) {
 
 static std::string encode_hex(const std::string &raw) {
     static char hexdigits[] = "0123456789abcdef";
-    size_t len = raw.length() * 2;
+    const size_t len = raw.length() * 2;
     char *buf = new char[len];
     for (int i = 0, j = 0; j < len; i++, j += 2) {
         uint8_t c = raw[i];
@@ -53,6 +57,96 @@ static std::string encode_hex(const std::string &raw) {
     }
     return std::string(buf, len);
 }
+
+
+static char alphabet64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+inline uint8_t b2d(char c) {
+    const char *p = strchr(alphabet64, c);
+    return p == NULL ? 0 : p - alphabet64;
+}
+
+static std::string decode_base64(const std::string &raw) {
+    const size_t len = raw.length();
+    if (len % 4 != 0 || len == 0) {
+        return "";
+    }
+
+    size_t bufsz = len / 4 * 3;
+    if (raw[len - 1] == '=') {
+        bufsz--;
+    }
+    if (raw[len - 2] == '=') {
+        bufsz--;
+    }
+
+    char *buf = new char[bufsz];
+
+    int j = 0;
+    for (int i = 0; i < len; i += 4)
+    {
+        uint8_t a = b2d(raw[i]);
+        uint8_t b = b2d(raw[i + 1]);
+        buf[j++] = ((a << 2) & 0xfc) | ((b >> 4) & 0x03);
+
+        if (raw[i + 2] != '=') {
+            a = b2d(raw[i + 2]);
+        } else {
+            break;
+        }
+
+        buf[j++] = ((b << 4) & 0xf0) | ((a >> 2) & 0x0f);
+
+        if (raw[i + 3] != '=') {
+            b = b2d(raw[i + 3]);
+        } else {
+            break;
+        }
+
+        buf[j++] = ((a << 6) & 0xc0) | (b & 0x3f);
+    }
+
+    return std::string(buf, bufsz);
+}
+
+static std::string encode_base64(const std::string &raw) {
+    const size_t length = raw.length();
+    if (length == 0) {
+        return "";
+    }
+    const size_t bufsz = (length + 2) / 3 * 4;
+    char *buf = new char[bufsz];
+
+    for (int i = 0, j = 0; i < length; i++) {
+        uint8_t c = (raw[i] >> 2) & 0x3f;
+        buf[j++] = alphabet64[c];
+
+        c = (raw[i] << 4) & 0x3f;
+        if (++i < length)
+            c |= (raw[i] >> 4) & 0x0f;
+        buf[j++] = alphabet64[c];
+
+        if (i < length) {
+            c = (raw[i] << 2) & 0x3c;
+            if (++i < length)
+                c |= (raw[i] >> 6) & 0x03;
+            buf[j++] = alphabet64[c];
+        } else {
+            ++i;
+            buf[j++] = '=';
+        }
+
+        if (i < length) {
+            c = raw[i] & 0x3f;
+            buf[j++] = alphabet64[c];
+        } else {
+            buf[j++] = '=';
+        }
+    }
+
+    return std::string(buf, bufsz);
+}
+
 
 class VTranslate: public gloox::StanzaExtension {
 public:
@@ -70,6 +164,9 @@ public:
             switch (encoding_) {
                 case EncodingHex:
                     data_ = decode_hex(data->cdata());
+                    break;
+                case EncodingBase64:
+                    data_ = decode_base64(data->cdata());
                     break;
                 case EncodingNone:
                 default:

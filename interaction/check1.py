@@ -11,6 +11,8 @@ CHECK_TIMES = 10
 def _encode(raw, encoding):
     if encoding == 'hex':
         return raw.encode('hex')
+    elif encoding == 'b64':
+        return raw.encode('base64').replace('\n', '')
     else:
         return raw
 
@@ -49,14 +51,14 @@ def main():
             try:
                 if method == 'echo':
                     raw = randoms(random.randint(0, 10))
-                    encoding = random.choice([None, 'hex'])
+                    encoding = random.choice([None, 'hex', 'b64'])
                     data = _encode(raw, encoding)
                     log.info('checking echo %s %s', data, encoding)
                     ret = self.translate(method, data, encoding)
                     assert ret == raw
                 else:
                     raw = randoms(random.randint(0, 10))
-                    encoding = random.choice([None, 'hex'])
+                    encoding = random.choice([None, 'hex', 'b64'])
                     data = _encode(raw, encoding)
                     log.info('checking %s %s %s', method, data, encoding)
                     ret = self.translate(method, data, encoding)

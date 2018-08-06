@@ -71,7 +71,8 @@ class VBotBase(ClientXMPP):
         p.text = data
         if encoding is not None:
             p.set('encode', {
-                'hex': '1'
+                'hex': '1',
+                'b64': '2',
                 }[encoding])
         iq['translate'].append(m)
         iq['translate'].append(p)
@@ -82,6 +83,8 @@ class VBotBase(ClientXMPP):
         raw = vt['data']
         if enc == '1':
             raw = raw.decode('hex')
+        elif enc == '2':
+            raw = raw.decode('base64')
         log.debug('%s(%s) = %s', method, data,
                 raw.encode('hex'))
         return raw
