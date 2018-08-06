@@ -12,6 +12,7 @@
 #include <gloox/connectionlistener.h>
 #include <gloox/stanzaextension.h>
 #include <flite/flite.h>
+#include <qrencode.h>
 
 extern "C" cst_voice *register_cmu_us_kal(void *);
 
@@ -151,9 +152,13 @@ static std::string encode_base64(const std::string &raw) {
     return std::string(buf, bufsz);
 }
 
+class VPluginBase;
 
 class VTranslate: public gloox::StanzaExtension {
 public:
+
+    friend VPluginBase;
+
     static const int type = gloox::StanzaExtensionType::ExtUser + 1;
 
     VTranslate(const gloox::Tag *tag) : gloox::StanzaExtension(type), valid_(false), encoding_(EncodingNone)
@@ -231,6 +236,49 @@ private:
     enum encoding encoding_;
 };
 
+class VPluginBase {
+public:
+    VPluginBase() {}
+
+    virtual void run(VTranslate *vt, const std::string &data) const {
+        vt->setData("");
+    }
+};
+
+class VPluginEcho: public VPluginBase {
+public:
+    virtual void run(VTranslate *vt, const std::string &data) const {
+        vt->setData(data);
+    }
+};
+
+class VPluginSpeak: public VPluginBase {
+public:
+    VPluginSpeak() {
+        flite_init();
+        voice_ = register_cmu_us_kal(NULL);
+    }
+    virtual void run(VTranslate *vt, const std::string &data) const {
+        cst_wave *cw = flite_text_to_wave(data.c_str(), const_cast<cst_voice *>(voice_));
+        if (cw) {
+            char *buf = NULL;
+            size_t bufsz = 0;
+            FILE *fd = open_memstream(&buf, &bufsz);
+            int ret = cst_wave_save_riff_fd(cw, static_cast<cst_file>(fd));
+            fclose(fd);
+            if (!ret) {
+                vt->setData(std::string(buf, bufsz));
+            }
+            if (buf != NULL) {
+                free(buf);
+            }
+            delete_wave(cw);
+        }
+    }
+private:
+    const cst_voice *voice_;
+};
+
 class VBot : public gloox::ConnectionListener,
              gloox::MessageSessionHandler,
              gloox::MessageHandler,
@@ -259,8 +307,9 @@ class VBot : public gloox::ConnectionListener,
         client_->logInstance().registerLogHandler(gloox::LogLevelDebug, -1, this);
 #endif
 
-        flite_init();
-        voice_ = register_cmu_us_kal(NULL);
+        addVPlugin("", new VPluginBase());
+        addVPlugin("echo", new VPluginEcho());
+        addVPlugin("speak", new VPluginSpeak());
     }
 
     virtual ~VBot()
@@ -359,25 +408,8 @@ class VBot : public gloox::ConnectionListener,
                 
                 auto method = vt->method();
                 auto data = vt->data();
-
-                if (method == "echo") {
-                    vt->setData(data);
-                } else if (method == "speak") {
-                    cst_wave *cw = flite_text_to_wave(data.c_str(), voice_);
-                    char *buf = NULL;
-                    size_t bufsz = 0;
-                    cst_file fd = static_cast<cst_file>(open_memstream(&buf, &bufsz));
-                    cst_wave_save_riff_fd(cw, fd);
-                    fclose(fd);
-                    std::string raw(buf, bufsz);
-                    vt->setData(raw);
-                    if (buf != NULL) {
-                        free(buf);
-                    }
-                    delete_wave(cw);
-                } else {
-                    vt->setData("");
-                }
+                auto vp = getVPlugin(method);
+                vp->run(vt, data);
 
                 gloox::IQ re(gloox::IQ::Result, iq.from(), iq.id());
                 re.setFrom(iq.to());
@@ -395,6 +427,23 @@ class VBot : public gloox::ConnectionListener,
     virtual void handleIqID(const gloox::IQ &iq, int context) {
     }
 
+    void addVPlugin(const std::string &name, const VPluginBase *vp) {
+        if (name == "") {
+            vplugin_default_ = vp;
+        } else if (vplugins_.find(name) == vplugins_.end()) {
+            vplugins_[name] = vp;
+        }
+    }
+
+    const VPluginBase *getVPlugin(const std::string &name) const {
+        auto k = vplugins_.find(name);
+        if (k != vplugins_.end()) {
+            return k->second;
+        } else {
+            return vplugin_default_;
+        }
+    }
+
 #ifdef DEBUG
     virtual void handleLog(gloox::LogLevel level, gloox::LogArea area, const std::string &message)
     {
@@ -407,7 +456,8 @@ class VBot : public gloox::ConnectionListener,
     gloox::Client *client_;
     VTranslate *vtranslate_ext_;
     std::map<std::string, gloox::MessageSession *> vbot_sessions_;
-    cst_voice *voice_;
+    const VPluginBase *vplugin_default_;
+    std::map<std::string, const VPluginBase *> vplugins_;
 };
 
 int main(int argc, char *argv[])
