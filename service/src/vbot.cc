@@ -12,6 +12,7 @@
 #include <gloox/connectionlistener.h>
 #include <gloox/stanzaextension.h>
 #include <flite/flite.h>
+#include <png.h>
 #include <qrencode.h>
 
 extern "C" cst_voice *register_cmu_us_kal(void *);
@@ -279,6 +280,128 @@ private:
     const cst_voice *voice_;
 };
 
+class VPluginQREncode: public VPluginBase {
+public:
+    virtual void run(VTranslate *vt, const std::string &data) const {
+        auto text = reinterpret_cast<unsigned char *>(const_cast<char *>(data.c_str()));
+        QRcode *qr = QRcode_encodeData(data.length(), text, 0, QR_ECLEVEL_L);
+        if (qr) {
+            char *buf = NULL;
+            size_t bufsz = 0;
+            FILE *fd = open_memstream(&buf, &bufsz);
+            int ret = qrcode_save_png_fd(qr, fd);
+            fclose(fd);
+            if (!ret) {
+                vt->setData(std::string(buf, bufsz));
+            }
+            if (buf != NULL) {
+                free(buf);
+            }
+            QRcode_free(qr);
+        }
+    }
+private:
+    int qrcode_save_png_fd(QRcode *qr, FILE *fp) const {
+        const int margin = 2;
+        const int size = 3;
+        const int dpi = 72;
+        constexpr double INCHES_PER_METER = 100.0 / 2.54;
+
+		png_byte alpha_values[2];
+		uint8_t *p, *q;
+		int x, y, xx, yy, bit;
+		uint32_t realwidth;
+
+        static const uint8_t fg_color[4] = {0, 0, 0, 255};
+        static const uint8_t bg_color[4] = {255, 255, 255, 255};
+
+		realwidth = (qr->width + margin * 2) * size;
+        uint8_t *row = (uint8_t *)malloc((size_t)((realwidth + 7) / 8));
+        if (row == NULL) {
+            return -1;
+        }
+
+		png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+		if (png_ptr == NULL) {
+            return -1;
+		}
+
+		png_infop info_ptr = png_create_info_struct(png_ptr);
+		if (info_ptr == NULL) {
+            return -1;
+		}
+
+		if (setjmp(png_jmpbuf(png_ptr))) {
+			png_destroy_write_struct(&png_ptr, &info_ptr);
+            return -1;
+		}
+
+        png_colorp palette = (png_colorp)malloc(sizeof(png_color) * 2);
+        if(palette == NULL) {
+            return -1;
+        }
+
+        palette[0].red   = fg_color[0];
+        palette[0].green = fg_color[1];
+        palette[0].blue  = fg_color[2];
+        palette[1].red   = bg_color[0];
+        palette[1].green = bg_color[1];
+        palette[1].blue  = bg_color[2];
+        alpha_values[0] = fg_color[3];
+        alpha_values[1] = bg_color[3];
+        png_set_PLTE(png_ptr, info_ptr, palette, 2);
+        png_set_tRNS(png_ptr, info_ptr, alpha_values, 2, NULL);
+
+        png_init_io(png_ptr, fp);
+        png_set_IHDR(png_ptr, info_ptr, realwidth, realwidth, 1,
+                PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+                PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
+        png_set_pHYs(png_ptr, info_ptr, dpi * INCHES_PER_METER,
+                     dpi * INCHES_PER_METER, PNG_RESOLUTION_METER);
+        png_write_info(png_ptr, info_ptr);
+
+        memset(row, 0xff, (size_t)((realwidth + 7) / 8));
+        for(y = 0; y < margin * size; y++) {
+            png_write_row(png_ptr, row);
+        }
+
+        p = qr->data;
+        for(y = 0; y < qr->width; y++) {
+            memset(row, 0xff, (size_t)((realwidth + 7) / 8));
+            q = row;
+            q += margin * size / 8;
+            bit = 7 - (margin * size % 8);
+            for(x = 0; x < qr->width; x++) {
+                for(xx = 0; xx < size; xx++) {
+                    *q ^= (*p & 1) << bit;
+                    bit--;
+                    if(bit < 0) {
+                        q++;
+                        bit = 7;
+                    }
+                }
+                p++;
+            }
+            for(yy = 0; yy < size; yy++) {
+                png_write_row(png_ptr, row);
+            }
+        }
+
+        memset(row, 0xff, (size_t)((realwidth + 7) / 8));
+        for(y = 0; y < margin * size; y++) {
+            png_write_row(png_ptr, row);
+        }
+
+		png_write_end(png_ptr, info_ptr);
+		png_destroy_write_struct(&png_ptr, &info_ptr);
+
+		free(row);
+		free(palette);
+		return 0;
+    }
+};
+
 class VBot : public gloox::ConnectionListener,
              gloox::MessageSessionHandler,
              gloox::MessageHandler,
@@ -310,6 +433,7 @@ class VBot : public gloox::ConnectionListener,
         addVPlugin("", new VPluginBase());
         addVPlugin("echo", new VPluginEcho());
         addVPlugin("speak", new VPluginSpeak());
+        addVPlugin("qrencode", new VPluginQREncode());
     }
 
     virtual ~VBot()

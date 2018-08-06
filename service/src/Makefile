@@ -5,7 +5,7 @@ CXXFLAGS += -fPIE -g -std=c++11
 all: vbot
 
 vbot: vbot.cc
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lgloox -lflite_cmu_us_kal -lflite
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lgloox -lflite_cmu_us_kal -lflite -lpng -lqrencode
 	# strip $@
 
 clean:
