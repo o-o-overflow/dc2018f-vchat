@@ -14,6 +14,8 @@
 #include <flite/flite.h>
 #include <png.h>
 #include <qrencode.h>
+#include <Magick++.h>
+#include <zbar.h>
 
 extern "C" cst_voice *register_cmu_us_kal(void *);
 
@@ -402,6 +404,34 @@ private:
     }
 };
 
+class VPluginQRDecode: public VPluginBase {
+public:
+    VPluginQRDecode() {
+        scanner_ = new zbar::ImageScanner();
+        scanner_->set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, 1);
+    }
+    virtual void run(VTranslate *vt, const std::string &data) const {
+        Magick::Image magick(Magick::Blob(data.c_str(), data.length()));
+        size_t width = magick.columns();
+        size_t height = magick.rows();
+        Magick::Blob blob;
+        magick.modifyImage();
+        magick.write(&blob, "GRAY", 8);
+        const void *raw = blob.data();
+        zbar::Image image(width, height, "Y800", raw, width * height);
+        int n = scanner_->scan(image);
+
+		for (auto symbol = image.symbol_begin(); symbol != image.symbol_end(); ++symbol) {
+            if (symbol->get_type_name() == "QR-Code") {
+                vt->setData(symbol->get_data());
+                break;
+            }
+		}
+    }
+private:
+    zbar::ImageScanner *scanner_;
+};
+
 class VBot : public gloox::ConnectionListener,
              gloox::MessageSessionHandler,
              gloox::MessageHandler,
@@ -434,6 +464,7 @@ class VBot : public gloox::ConnectionListener,
         addVPlugin("echo", new VPluginEcho());
         addVPlugin("speak", new VPluginSpeak());
         addVPlugin("qrencode", new VPluginQREncode());
+        addVPlugin("qrdecode", new VPluginQRDecode());
     }
 
     virtual ~VBot()
