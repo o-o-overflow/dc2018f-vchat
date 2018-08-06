@@ -1,4 +1,3 @@
-import logging
 from pwn import *
 
 from sleekxmpp import ClientXMPP, Iq

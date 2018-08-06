@@ -255,6 +255,13 @@ public:
     }
 };
 
+class VPluginListen: public VPluginBase {
+public:
+    virtual void run(VTranslate *vt, const std::string &data) const {
+        vt->setData("Sorry, I can't hear you");
+    }
+};
+
 class VPluginSpeak: public VPluginBase {
 public:
     VPluginSpeak() {
@@ -463,6 +470,7 @@ class VBot : public gloox::ConnectionListener,
         addVPlugin("", new VPluginBase());
         addVPlugin("echo", new VPluginEcho());
         addVPlugin("speak", new VPluginSpeak());
+        addVPlugin("listen", new VPluginListen());
         addVPlugin("qrencode", new VPluginQREncode());
         addVPlugin("qrdecode", new VPluginQRDecode());
     }

@@ -1,9 +1,7 @@
 #!/usr/bin/env python2
 
 from pwn import *
-import sys, random
 from vbot import VBot
-from pwnlib.util.fiddling import randoms
 
 CHECK_DELAY = 1
 CHECK_TIMES = 10
@@ -47,7 +45,7 @@ def main():
             if self.checks >= CHECK_TIMES:
                 self.check_done()
                 return
-            method = random.choice(['echo', randoms(4)])
+            method = random.choice(['echo', 'echo', 'listen', randoms(4)])
             try:
                 if method == 'echo':
                     raw = randoms(random.randint(0, 10))
@@ -56,6 +54,12 @@ def main():
                     log.info('checking echo %s %s', data, encoding)
                     ret = self.translate(method, data, encoding)
                     assert ret == raw
+                elif method == 'listen':
+                    raw = randoms(random.randint(10, 80), ''.join(map(chr, range(0x100))))
+                    encoding = random.choice(['hex', 'b64'])
+                    data = _encode(raw, encoding)
+                    log.info('checking listen %s %s', data, encoding)
+                    assert self.translate(method, data, encoding) == "Sorry, I can't hear you"
                 else:
                     raw = randoms(random.randint(0, 10))
                     encoding = random.choice([None, 'hex', 'b64'])
