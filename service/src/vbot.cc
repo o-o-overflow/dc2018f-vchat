@@ -219,8 +219,8 @@ public:
             data_ = data;
             encoding_ = EncodingNone;
         } else {
-            data_ = encode_hex(data);
-            encoding_ = EncodingHex;
+            data_ = encode_base64(data);
+            encoding_ = EncodingBase64;
         }
     }
 
