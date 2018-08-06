@@ -1,8 +1,7 @@
 FROM ubuntu:18.04
-RUN apt-get update && apt-get install -y xinetd libgloox15
+RUN apt-get update && apt-get install -y xinetd libgloox15 libflite1
 RUN touch /flag && chmod 644 /flag && echo -ne "TESTFLAG" | md5sum | cut -f1 -d' ' > /flag
 COPY service.conf /service.conf
-
 COPY src/vchat /vchat
 COPY src/vbot /vbot
 RUN chmod 755 /vchat /vbot

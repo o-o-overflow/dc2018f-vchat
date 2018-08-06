@@ -1,4 +1,5 @@
 #include <map>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <gloox/gloox.h>
@@ -10,6 +11,9 @@
 #include <gloox/messagesessionhandler.h>
 #include <gloox/connectionlistener.h>
 #include <gloox/stanzaextension.h>
+#include <flite/flite.h>
+
+extern "C" cst_voice *register_cmu_us_kal(void *);
 
 static const std::string XMLNS_VBOT_TRANSLATE = "vbot:translate";
 enum encoding {
@@ -254,6 +258,9 @@ class VBot : public gloox::ConnectionListener,
 #ifdef DEBUG
         client_->logInstance().registerLogHandler(gloox::LogLevelDebug, -1, this);
 #endif
+
+        flite_init();
+        voice_ = register_cmu_us_kal(NULL);
     }
 
     virtual ~VBot()
@@ -355,6 +362,19 @@ class VBot : public gloox::ConnectionListener,
 
                 if (method == "echo") {
                     vt->setData(data);
+                } else if (method == "speak") {
+                    cst_wave *cw = flite_text_to_wave(data.c_str(), voice_);
+                    char *buf = NULL;
+                    size_t bufsz = 0;
+                    cst_file fd = static_cast<cst_file>(open_memstream(&buf, &bufsz));
+                    cst_wave_save_riff_fd(cw, fd);
+                    fclose(fd);
+                    std::string raw(buf, bufsz);
+                    vt->setData(raw);
+                    if (buf != NULL) {
+                        free(buf);
+                    }
+                    delete_wave(cw);
                 } else {
                     vt->setData("");
                 }
@@ -387,6 +407,7 @@ class VBot : public gloox::ConnectionListener,
     gloox::Client *client_;
     VTranslate *vtranslate_ext_;
     std::map<std::string, gloox::MessageSession *> vbot_sessions_;
+    cst_voice *voice_;
 };
 
 int main(int argc, char *argv[])
