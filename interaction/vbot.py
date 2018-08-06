@@ -62,7 +62,7 @@ class VBotBase(ClientXMPP):
             time.sleep(0.1)
         return o[0] if len(o) == 1 else None
 
-    def translate(self, method, data, encoding=None):
+    def translate(self, method, data, encoding=None, timeout=None):
         assert self.target is not None
         iq = self.make_iq_get(ito=self.target)
         m = ET.Element('method')
@@ -77,7 +77,7 @@ class VBotBase(ClientXMPP):
         iq['translate'].append(m)
         iq['translate'].append(p)
 
-        resp = iq.send()
+        resp = iq.send(timeout=timeout)
         vt = resp['translate']
         enc = vt.find(vt._fix_ns('data')).get('encode')
         raw = vt['data']
