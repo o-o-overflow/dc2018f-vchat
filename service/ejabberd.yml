@@ -160,7 +160,7 @@ listen:
     ##
     ## Stream compression
     ##
-    ## zlib: true
+    zlib: true
     ##
     max_stanza_size: 65536
     shaper: c2s_shaper

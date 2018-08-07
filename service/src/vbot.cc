@@ -458,7 +458,7 @@ class VBot : public gloox::ConnectionListener,
         client_ = new gloox::Client(self_, "");
         client_->registerConnectionListener(this);
         // client_->setTls(gloox::TLSDisabled);
-        client_->setCompression(false);
+        // client_->setCompression(false);
         client_->disco()->setVersion("vbot", "0.1");
         client_->registerMessageSessionHandler(this, 0);
         client_->registerStanzaExtension(new VTranslate(new gloox::Tag("translate", gloox::XMLNS, XMLNS_VBOT_TRANSLATE)));
