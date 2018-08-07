@@ -151,12 +151,12 @@ listen:
     port: 5222
     ip: "::"
     module: ejabberd_c2s
-    starttls: true
+    ## starttls: true
     ##
     ## To enforce TLS encryption for client connections,
     ## use this instead of the "starttls" option:
     ##
-    ## starttls_required: true
+    starttls_required: true
     ##
     ## Stream compression
     ##
@@ -257,7 +257,7 @@ listen:
 ## Allowed values are: false, optional or required
 ## You must specify 'certfiles' option
 ##
-s2s_use_starttls: optional
+s2s_use_starttls: required
 
 ##
 ## S2S whitelist or blacklist
