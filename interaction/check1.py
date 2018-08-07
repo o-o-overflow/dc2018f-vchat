@@ -3,8 +3,8 @@
 from pwn import *
 from vbot import VBot
 
-CHECK_DELAY = 1
-CHECK_TIMES = 10
+CHECK_DELAY = 0
+CHECK_TIMES = 40
 
 def _encode(raw, encoding):
     if encoding == 'hex':
@@ -22,53 +22,75 @@ def main():
         def target_ready(self, e):
             VBot.target_ready(self, e)
 
+            self.can_translate = True
+            self.can_crash = False
+
             self.checks = 0
-            self.schedule('translate_check', CHECK_DELAY, self.translate_check,
-                    repeat=True)
-            self.message_check()
-
-        def message_check(self):
-            # check direct message
-            msgs = {
-                    'ping': 'pong',
-                    'tip': 'try another challenge',
-                    'bye': 'good choice, bye!',
-                    }
-            msg = random.choice(msgs.keys())
-
-            log.info('checking msg %s', msg)
-            if self.message_sync(self.make_message(self.target, msg)) != msgs[msg]:
-                self.check_fail('unmatched response for %s' % msg)
+            for _ in xrange(CHECK_TIMES):
+                if not self.translate_check():
+                    break
+                time.sleep(CHECK_DELAY)
+            self.check_done()
 
         def translate_check(self):
-            self.checks += 1
-            if self.checks >= CHECK_TIMES:
-                self.check_done()
-                return
-            method = random.choice(['echo', 'echo', 'listen', randoms(4)])
+            method = random.choice(['echo', 'echo', 'listen', 'msg', randoms(4)])
             try:
+                expected = None
                 if method == 'echo':
                     raw = randoms(random.randint(0, 10))
                     encoding = random.choice([None, 'hex', 'b64'])
                     data = _encode(raw, encoding)
                     log.info('checking echo %s %s', data, encoding)
+                    expected = raw
                     ret = self.translate(method, data, encoding)
-                    assert ret == raw
                 elif method == 'listen':
                     raw = randoms(random.randint(10, 80), ''.join(map(chr, range(0x100))))
                     encoding = random.choice(['hex', 'b64'])
                     data = _encode(raw, encoding)
                     log.info('checking listen %s %s', data, encoding)
-                    assert self.translate(method, data, encoding) == "Sorry, I can't hear you"
+                    expected = "Sorry, I can't hear you"
+                    ret = self.translate(method, data, encoding)
+                elif method == 'msg':
+                    # check direct message
+                    msgs = {
+                            'ping': 'pong',
+                            'tip': 'try another challenge',
+                            'bye': 'good choice, bye!',
+                            }
+                    msg = random.choice(msgs.keys())
+                    expected = msgs[msg]
+                    log.info('checking msg %s', msg)
+                    ret = self.message_sync(self.make_message(self.target, msg))
                 else:
                     raw = randoms(random.randint(0, 10))
                     encoding = random.choice([None, 'hex', 'b64'])
                     data = _encode(raw, encoding)
                     log.info('checking %s %s %s', method, data, encoding)
+                    expected = ''
                     ret = self.translate(method, data, encoding)
-                    assert ret == ''
+
+                if method == 'msg':
+                    if msg is 'bye':
+                        self.can_translate = False
+                        self.can_crash = True
+                    else:
+                        self.can_translate = True
+                elif not self.can_translate:
+                    expected = 'service-unavailable'
+
+                if ret is None and self.can_crash:
+                    # we might have triggered the bug and it crashs
+                    log.warn('probably crashed?')
+                    self.check_done()
+                    return False
+
+                assert expected == ret, 'got %s expected %r' % (ret,
+                        expected)
+
             except Exception as e:
                 self.check_fail(e)
+                return False
+            return True
 
     xmpp = MyVBot((host, port))
     xmpp.connect()
@@ -79,5 +101,4 @@ def main():
 
 if __name__ == '__main__':
     # logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
-    # context.log_level = 'DEBUG'
     main()

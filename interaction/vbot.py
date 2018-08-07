@@ -1,5 +1,6 @@
 from pwn import *
 
+from Queue import Queue, Empty
 from sleekxmpp import ClientXMPP, Iq
 from sleekxmpp.xmlstream import ElementBase, register_stanza_plugin
 from sleekxmpp.exceptions import IqError, IqTimeout, XMPPError
@@ -29,7 +30,7 @@ class VBotBase(ClientXMPP):
 
     def check_fail(self, e=None):
         if e is not None:
-            log.warn('checking fail: %s', e)
+            log.warn('checking fail: %r', e)
         self.check_done()
 
     def check_done(self):
@@ -47,19 +48,19 @@ class VBotBase(ClientXMPP):
         log.debug('recv %s', msg)
 
     def message_sync(self, msg, timeout=3):
-        o = []
+        q = Queue()
 
         def waiter_handler(msg):
             res = msg.get('body')
-            o.append(res)
+            q.put(res)
         
         self.add_event_handler('message', waiter_handler, threaded=True, disposable=True)
         msg.send()
 
-        end = time.time() + timeout
-        while time.time() < end and len(o) == 0:
-            time.sleep(0.1)
-        return o[0] if len(o) == 1 else None
+        try:
+            return q.get(block=True, timeout=timeout)
+        except Empty:
+            return None
 
     def translate(self, method, data, encoding=None, timeout=None):
         assert self.target is not None
@@ -76,17 +77,26 @@ class VBotBase(ClientXMPP):
         iq['translate'].append(m)
         iq['translate'].append(p)
 
-        resp = iq.send(timeout=timeout)
-        vt = resp['translate']
-        enc = vt.find(vt._fix_ns('data')).get('encode')
-        raw = vt['data']
-        if enc == '1':
-            raw = raw.decode('hex')
-        elif enc == '2':
-            raw = raw.decode('base64')
-        log.debug('%s(%s) = %s', method, data,
-                raw.encode('hex'))
-        return raw
+        try:
+            resp = iq.send(timeout=timeout)
+
+            vt = resp['translate']
+
+            enc = vt.find(vt._fix_ns('data')).get('encode')
+            raw = vt['data']
+
+            if enc == '1':
+                raw = raw.decode('hex')
+            elif enc == '2':
+                raw = raw.decode('base64')
+            log.debug('%s(%s) = %s', method, data,
+                    raw.encode('hex'))
+            return raw
+        except IqError as e:
+            return e.condition
+        except IqTimeout as e:
+            log.warn('Iq timeout')
+            return None
 
 class VBot(VBotBase):
     def __init__(self, server, *args, **kwargs):
