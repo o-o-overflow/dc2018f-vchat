@@ -1,0 +1,25 @@
+# This is the service's name
+service_name: "vchat"
+service_port: 2555
+max_patch_bytes: 5
+
+# All paths relative from `service` directory
+patchable_files:
+  - src/vbot
+
+# All paths relative to the `services` docker container
+flag_location:
+  - /flag
+
+authors:
+  - slipper
+description: "virtual assistent for you"
+
+# Directories for the next two are relative to the `interactions` docker container
+exploit_scripts:
+  - /exploit1.py
+
+sla_scripts:
+  - /check1.py
+  - /check2.py
+  - /check3.py
