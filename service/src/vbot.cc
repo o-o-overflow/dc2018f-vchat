@@ -100,6 +100,7 @@ static std::string decode_base64(const std::string &raw) {
         if (raw[i + 2] != '=') {
             a = b2d(raw[i + 2]);
         } else {
+            buf[j++] = 0;
             break;
         }
 
@@ -108,6 +109,7 @@ static std::string decode_base64(const std::string &raw) {
         if (raw[i + 3] != '=') {
             b = b2d(raw[i + 3]);
         } else {
+            buf[j++] = 0;
             break;
         }
 
