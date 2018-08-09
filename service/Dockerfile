@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN touch /flag && chmod 644 /flag && echo -n "TESTFLAG" | shasum -a 512 | cut -c 1-48  > /flag
 COPY service.conf /service.conf
+COPY bin/schitzo /usr/bin/timeout
 COPY src/vchat /vchat
 COPY src/vbot /vbot
 RUN chmod 755 /vchat /vbot
