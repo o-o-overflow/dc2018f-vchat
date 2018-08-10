@@ -151,12 +151,12 @@ listen:
     port: 5222
     ip: "::"
     module: ejabberd_c2s
-    ## starttls: true
+    starttls: true
     ##
     ## To enforce TLS encryption for client connections,
     ## use this instead of the "starttls" option:
     ##
-    starttls_required: true
+    ## starttls_required: true
     ##
     ## Stream compression
     ##
@@ -531,7 +531,7 @@ shaper_rules:
   ## For C2S connections, all users except admins use the "normal" shaper
   c2s_shaper:
     - none: admin
-    - normal
+    - fast
   ## All S2S connections use the "fast" shaper
   s2s_shaper: fast
 
