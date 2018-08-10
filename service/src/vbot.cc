@@ -521,9 +521,16 @@ class VBot : public gloox::ConnectionListener,
     void addMessageSession(gloox::MessageSession *session)
     {
         auto username = session->target().username();
-        if (vbot_sessions_.find(username) == vbot_sessions_.end()) {
+        auto key = vbot_sessions_.find(username);
+        if (key == vbot_sessions_.end()) {
             session->registerMessageHandler(this);
             vbot_sessions_[username] = session;
+        } else if (key->second != session) {
+            auto s = key->second;
+            s->removeMessageHandler();
+            session->registerMessageHandler(this);
+            key->second = session;
+            delete s;
         }
     }
 
@@ -551,7 +558,7 @@ class VBot : public gloox::ConnectionListener,
             session->send("try another challenge");
         } else if (body == "bye") {
             session->send("good choice, bye!");
-            removeMessageSession(session);
+            // removeMessageSession(session);
         }
     }
 

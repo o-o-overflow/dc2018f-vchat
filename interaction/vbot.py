@@ -31,11 +31,14 @@ class VBotBase(ClientXMPP):
     def check_fail(self, e=None):
         if e is not None:
             log.warn('checking fail: %r', e)
+        print 'ERROR:', str(e)
+        sys.exit(1)
         self.check_done()
 
     def check_done(self):
         self.set_stop()
         self.disconnect()
+        sys.exit(0)
 
     def session_bind(self, event):
         log.info('logged in as %s', self.boundjid.user)

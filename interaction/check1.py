@@ -22,8 +22,6 @@ def main():
         def target_ready(self, e):
             VBot.target_ready(self, e)
 
-            self.can_translate = True
-            self.can_crash = False
 
             self.checks = 0
             for _ in xrange(CHECK_TIMES):
@@ -68,21 +66,6 @@ def main():
                     log.info('checking %s %s %s', method, data, encoding)
                     expected = ''
                     ret = self.translate(method, data, encoding)
-
-                if method == 'msg':
-                    if msg is 'bye':
-                        self.can_translate = False
-                        self.can_crash = True
-                    else:
-                        self.can_translate = True
-                elif not self.can_translate:
-                    expected = 'service-unavailable'
-
-                if ret is None and self.can_crash:
-                    # we might have triggered the bug and it crashs
-                    log.warn('probably crashed?')
-                    self.check_done()
-                    return False
 
                 assert expected == ret, 'got %s expected %r' % (ret,
                         expected)
