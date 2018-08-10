@@ -9,6 +9,7 @@ RUN pip install -r requirements.txt
 COPY vbot.py /vbot.py
 
 COPY exploit1.py /exploit1.py
+COPY exploit.sh /exploit.sh
 COPY poc1.py /poc1.py
 
 COPY check1.py /check1.py

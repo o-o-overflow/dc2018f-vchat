@@ -32,7 +32,7 @@ description: "virtual assistant for you"
 
 # Exploit scripts must output the flag using "FLAG: <FLAG>" and exit with 0 if the flag was captured correctly. 
 exploit_scripts:
-  - /exploit1.py
+  - /exploit.sh
 
 # SLA scripts are run every tick against the service.
 # This means that SLA traffic will be included in the PCAP dumps to teams

@@ -16,7 +16,7 @@ cd interaction && docker build . -t "$INTERACTION_TAG" && cd -
 SERVICE_ID=$(docker run -d --rm "$SERVICE_TAG")
 
 # TODO: EXPLOIT_SCRIPTS=$(get_info.py exploit_scripts)
-EXPLOIT_SCRIPTS="/exploit1.py"
+EXPLOIT_SCRIPTS="/exploit.sh"
 
 
 # TODO: SLA_SCRIPTS=$(get_info.py sla_scripts)
