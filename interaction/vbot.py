@@ -20,6 +20,9 @@ class VBotBase(ClientXMPP):
     def __init__(self):
         ClientXMPP.__init__(self, DEFAULT_JID, '')
 
+        self.wait_timeout = 0.1
+        self.reconnect_max_delay = 0
+
         self.add_event_handler('session_bind', self.session_bind)
         self.add_event_handler("session_start", self.session_start)
         self.add_event_handler('message', self.message)
@@ -32,12 +35,13 @@ class VBotBase(ClientXMPP):
         if e is not None:
             log.warn('checking fail: %r', e)
         print 'ERROR:', str(e)
-        sys.exit(1)
+        os.kill(os.getpid(), 9)
         self.check_done()
 
     def check_done(self):
         self.set_stop()
         self.disconnect()
+        # terminate others?
         sys.exit(0)
 
     def session_bind(self, event):
@@ -65,7 +69,8 @@ class VBotBase(ClientXMPP):
         except Empty:
             return None
 
-    def translate(self, method, data, encoding=None, timeout=None):
+    def translate(self, method, data, encoding=None, timeout=None,
+            block=True):
         assert self.target is not None
         iq = self.make_iq_get(ito=self.target)
         m = ET.Element('method')
@@ -81,7 +86,9 @@ class VBotBase(ClientXMPP):
         iq['translate'].append(p)
 
         try:
-            resp = iq.send(timeout=timeout)
+            resp = iq.send(timeout=timeout, block=block)
+            if not block:
+                return None
 
             vt = resp['translate']
 
