@@ -1,11 +1,24 @@
 # This is the service's name
 service_name: "vchat"
 service_port: 2555
-max_patch_bytes: 5
+
+# Type can be normal or king_of_the_hill
+type: normal
 
 # All paths relative from `service` directory
-patchable_files:
-  - src/vbot
+public_files:
+  - /src/vbot
+  - /src/vchat
+
+# Patch policy
+patch_policy:
+  # Analysis strategy (currently only `tracing`)
+  strategy: size
+  # Maximum number of changed bytes across all files
+  max_bytes: 200
+  # Path whitelist, relative to `service` directory
+  whitelist:
+    - /src/vbot
 
 # All paths relative to the `services` docker container
 flag_location:
@@ -13,13 +26,34 @@ flag_location:
 
 authors:
   - slipper
-description: "virtual assistent for you"
+description: "virtual assistant for you"
 
 # Directories for the next two are relative to the `interactions` docker container
+
+# Exploit scripts must output the flag using "FLAG: <FLAG>" and exit with 0 if the flag was captured correctly. 
 exploit_scripts:
   - /exploit1.py
 
+# SLA scripts are run every tick against the service.
+# This means that SLA traffic will be included in the PCAP dumps to teams
+# Exit with 0 if the service is correct, anything else if it is not.
+# If you want to surface an error message on patch submission, output "ERROR: <ERROR MESSAGE>"
 sla_scripts:
   - /check1.py
   - /check2.py
   - /check3.py
+
+# Test scripts are optional.
+# If you have test scripts, they will be used on patch validation, so they can do hard-core service assessment.
+# Will not be run on real services in production.
+# If you want to surface an error message on patch submission, output "ERROR: <ERROR MESSAGE>"
+# If you do not include test_scripts, the sla_scripts will be used to validate patches
+test_scripts:
+  - /test.sh
+
+# Service executables and invocation environments
+# executables:
+#   - path: /usr/sbin/xinetd
+#     # Invocation assumes that CWD is `service`
+#     arguments: ["/usr/sbin/xinetd", "-filelog", "-", "-dontfork", "-f", "/etc/xinetd.d/pointless"]
+#     environment: {}
