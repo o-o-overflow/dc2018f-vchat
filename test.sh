@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 set -x
@@ -30,18 +30,16 @@ SERVICE_PORT=2555
 
 IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$SERVICE_ID")
 
-for script in $EXPLOIT_SCRIPTS
-do
-	RESULT=$(docker run --rm "$INTERACTION_TAG" "$script" "$IP" "$SERVICE_PORT")
-	echo "$RESULT" | grep "FLAG:"
-	echo "$RESULT" | grep "FLAG: TESTFLAG"	
-done
 
 for script in $SLA_SCRIPTS
 do
-	RESULT=$(docker run -it --rm "$INTERACTION_TAG" "$script" "$IP" "$SERVICE_PORT")
+    docker run --rm "$INTERACTION_TAG" "$script" "$IP" "$SERVICE_PORT"
+done
+
+for script in $EXPLOIT_SCRIPTS
+do
+    RESULT=$(docker run --rm "$INTERACTION_TAG" "$script" "$IP" "$SERVICE_PORT")
+    echo $RESULT | grep "FLAG:"
 done
 
 docker kill "$SERVICE_ID"
-
-
