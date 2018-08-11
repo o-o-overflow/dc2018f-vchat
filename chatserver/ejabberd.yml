@@ -94,7 +94,7 @@ log_rate_limit: 100
 ##   - "example.org"
 ##
 hosts:
-  - "localhost"
+  - "ooo.vchat"
 
 ##
 ## route_subdomains: Delegate subdomains to other XMPP servers.
@@ -363,7 +363,7 @@ s2s_use_starttls: required
 ## To use both anonymous and internal authentication:
 ##
 host_config:
-    "localhost":
+    "ooo.vchat":
         auth_method:
             # - internal
             - anonymous
