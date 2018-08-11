@@ -19,6 +19,6 @@ COPY src/vbot /vbot
 RUN chmod 755 /vchat /vbot
 
 EXPOSE 2555
-ENV VCHAT_SERVER ooo.vchat
+ENV VCHAT_SERVER localhost
 ENV VCHAT_MESSAGE hello
 CMD ["xinetd", "-dontfork", "-f", "/service.conf"]
