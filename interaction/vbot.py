@@ -20,8 +20,8 @@ class VBotBase(ClientXMPP):
     def __init__(self):
         ClientXMPP.__init__(self, DEFAULT_JID, '')
 
-        self.wait_timeout = 0.1
-        self.reconnect_max_delay = 0
+        self.wait_timeout = 1
+        self.reconnect_max_delay = 1
 
         self.add_event_handler('session_bind', self.session_bind)
         self.add_event_handler("session_start", self.session_start)
