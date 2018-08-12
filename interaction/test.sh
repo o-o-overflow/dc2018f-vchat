@@ -1,3 +1,8 @@
 #!/bin/sh
 set -e
-./check1.py $1 $2 && ./check2.py $1 $2 && ./check3.py $1 $2
+echo "basic test"
+./check1.py $1 $2
+echo "speak test"
+./check2.py $1 $2
+echo "qrcode test"
+./check3.py $1 $2

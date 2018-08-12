@@ -15,3 +15,4 @@ COPY poc1.py /poc1.py
 COPY check1.py /check1.py
 COPY check2.py /check2.py
 COPY check3.py /check3.py
+COPY test.sh /test.sh
