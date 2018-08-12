@@ -15,7 +15,7 @@ patch_policy:
   # Analysis strategy (currently only `tracing`)
   strategy: size
   # Maximum number of changed bytes across all files
-  max_bytes: 200
+  max_bytes: 100
   # Path whitelist, relative to `service` directory
   whitelist:
     - /src/vbot
